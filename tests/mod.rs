@@ -28,5 +28,5 @@ fn test_string_reader() {
 
 #[test]
 fn test_mmap() {
-    test_map("/Users/bibhas/Downloads/message.html");
+    test_map("/Users/bibhas/Downloads/__message.html");
 }
