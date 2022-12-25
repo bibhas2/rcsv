@@ -1,5 +1,5 @@
 use rcsv::*;
-use rcsv::readers::StringReader;
+use rcsv::readers::*;
 
 #[test]
 fn test_string_reader() {
@@ -24,4 +24,9 @@ fn test_string_reader() {
     reader.mark_stop();
 
     assert_eq!(std::str::from_utf8(reader.segment()).unwrap(), "bb");
+}
+
+#[test]
+fn test_mmap() {
+    test_map("/Users/bibhas/Downloads/message.html");
 }
