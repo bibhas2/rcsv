@@ -4,13 +4,14 @@ use crate::Reader;
 mod unix_map {
     use std::{fs::File, os::fd::AsRawFd};
 
-    pub struct FileMapper {
+    pub struct FileMapper<'a> {
         file_size: libc::size_t,
         ptr: *mut libc::c_void,
         file: File,
+        bytes: &'a [u8],
     }
 
-    impl FileMapper {
+    impl <'a> FileMapper<'a> {
         pub fn map(file_name: &str) -> Result<FileMapper, &str> {
             println!("Mapping file {}.", file_name);
 
@@ -41,24 +42,25 @@ mod unix_map {
                     return Err("Failed to map file. mmap() failed.");
                 }
     
+                let bytes = std::slice::from_raw_parts(ptr as *const u8, file_size);
+
                 Ok(
                     FileMapper {
                         file_size,
                         ptr,
                         file, 
+                        bytes,
                     }
                 )
             }
         }
 
-        pub fn get_bytes(&self) -> &[u8] {
-            unsafe {
-                std::slice::from_raw_parts(self.ptr as *const u8, self.file_size)
-            }
+        pub fn get_bytes(&self) -> &'a [u8] {
+            self.bytes
         }
     }
 
-    impl Drop for FileMapper {
+    impl <'a> Drop for FileMapper<'a> {
         fn drop(&mut self) {
             println!("Unmapping file {}.", self.file.as_raw_fd());
 
