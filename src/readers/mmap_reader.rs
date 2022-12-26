@@ -12,7 +12,7 @@ mod unix_map {
     }
 
     impl <'a> FileMapper<'a> {
-        pub fn map(file_name: &str) -> Result<FileMapper, &str> {
+        pub fn map(file_name: &str) -> Result<FileMapper<'a>, &str> {
             println!("Mapping file {}.", file_name);
 
             let file = match File::open(file_name) {
@@ -55,7 +55,7 @@ mod unix_map {
             }
         }
 
-        pub fn get_bytes(&self) -> &'a [u8] {
+        pub fn get_bytes(&'a self) -> &'a [u8] {
             self.bytes
         }
     }
@@ -75,16 +75,21 @@ mod unix_map {
 use unix_map::FileMapper;
 
 pub fn test_map(file_name : &str) {
-    let mapper = match FileMapper::map(file_name) {
-        Ok(m) => m,
-        Err(msg) => {
-            println!("{}", msg);
+    let bytes;
 
-            return;
-        }
-    };
+    {
+        let mapper = match FileMapper::map(file_name) {
+            Ok(m) => m,
+            Err(msg) => {
+                println!("{}", msg);
+    
+                return;
+            }
+        };
+    
+        bytes = mapper.get_bytes();
+    }
 
-    let bytes: &[u8] = mapper.get_bytes();
     let str = std::str::from_utf8(bytes).unwrap();
 
     println!("{}", str);
