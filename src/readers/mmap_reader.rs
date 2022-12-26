@@ -13,7 +13,6 @@ mod unix_map {
 
     impl <'a> FileMapper<'a> {
         pub fn map(file_name: &str) -> Result<FileMapper<'a>, &str> {
-            println!("Mapping file {}.", file_name);
 
             let file = match File::open(file_name) {
                 Ok(f) => f,
@@ -58,12 +57,13 @@ mod unix_map {
         pub fn get_bytes(&'a self) -> &'a [u8] {
             self.bytes
         }
+        pub fn size(&self) -> usize {
+            self.file_size
+        }
     }
 
     impl <'a> Drop for FileMapper<'a> {
         fn drop(&mut self) {
-            println!("Unmapping file {}.", self.file.as_raw_fd());
-
             unsafe {
                 libc::munmap(self.ptr, self.file_size);
             }
@@ -74,23 +74,57 @@ mod unix_map {
 #[cfg(unix)]
 use unix_map::FileMapper;
 
-pub fn test_map(file_name : &str) {
-    let bytes;
+pub struct MemoryMappedReader<'a> {
+    start: usize,
+    stop: usize,
+    position: usize,
+    mapper: FileMapper<'a>,
+}
 
-    {
-        let mapper = match FileMapper::map(file_name) {
-            Ok(m) => m,
-            Err(msg) => {
-                println!("{}", msg);
-    
-                return;
-            }
-        };
-    
-        bytes = mapper.get_bytes();
+impl <'a> MemoryMappedReader<'a> {
+    pub fn new(file_name: &str) -> Result<MemoryMappedReader<'a>, &str> {
+        FileMapper::map(file_name).map(|mapper| MemoryMappedReader {
+            start: 0,
+            stop: 0,
+            position: 0,
+            mapper: mapper})
+    }
+}
+
+impl <'a> Reader<'a> for MemoryMappedReader<'a> {
+    fn peek(&self) -> Option<u8> {
+        if self.position < self.mapper.size() {
+            Some(self.mapper.get_bytes()[self.position])
+        } else {
+            None
+        }
     }
 
-    let str = std::str::from_utf8(bytes).unwrap();
+    fn pop(&mut self) -> Option<u8> {
+        if self.position < self.mapper.size() {
+            self.position += 1;
 
-    println!("{}", str);
+            Some(self.mapper.get_bytes()[self.position - 1])
+        } else {
+            None
+        }
+    }
+
+    fn putback(&mut self) {
+        if self.position > 0 {
+            self.position -= 1;
+        }
+    }
+
+    fn mark_start(&mut self) {
+        self.start = self.position;
+    }
+
+    fn mark_stop(&mut self) {
+        self.stop = if self.position > 0  {self.position - 1} else {0};
+    }
+
+    fn segment(&'a self) -> &'a [u8] {
+        &self.mapper.get_bytes()[self.start..self.stop]
+    }
 }

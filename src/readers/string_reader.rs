@@ -43,10 +43,6 @@ impl <'a> Reader<'a> for StringReader<'a> {
         }
     }
 
-    fn good(&self) -> bool {
-        return true;
-    }
-
     fn mark_start(&mut self) {
         self.start = self.position;
     }
@@ -55,7 +51,7 @@ impl <'a> Reader<'a> for StringReader<'a> {
         self.stop = if self.position > 0  {self.position - 1} else {0};
     }
 
-    fn segment(&self) -> &'a [u8] {
+    fn segment(&'a self) -> &'a [u8] {
         &self.data[self.start..self.stop]
     }
 }
