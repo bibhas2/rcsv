@@ -34,10 +34,7 @@ fn test_mmap() {
     let mapper = match FileMapper::new(&resource) {
         Ok(r) => r,
         Err(e) => {
-            println!("{}", e);
-            assert!(false);
-
-            return;
+            panic!("{}", e);
         }
     };
 
