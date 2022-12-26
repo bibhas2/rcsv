@@ -1,5 +1,3 @@
-use crate::Reader;
-
 #[cfg(unix)]
 mod unix_map {
     use std::{fs::File, os::fd::AsRawFd};

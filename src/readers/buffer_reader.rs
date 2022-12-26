@@ -1,19 +1,19 @@
 use crate::Reader;
 
-pub struct StringReader<'a> {
+pub struct BufferReader<'a> {
     start: usize,
     stop: usize,
     position: usize,
     data: &'a [u8],
 }
 
-impl <'a> StringReader<'a> {
-    pub fn from_str(str: &'a str) -> StringReader<'a> {
-        StringReader::new(str.as_bytes())
+impl <'a> BufferReader<'a> {
+    pub fn from_str(str: &'a str) -> BufferReader<'a> {
+        BufferReader::new(str.as_bytes())
     }
 
-    pub fn new(data: &'a [u8]) -> StringReader<'a> {
-        StringReader {
+    pub fn new(data: &'a [u8]) -> BufferReader<'a> {
+        BufferReader {
             start: 0,
             stop: 0,
             position: 0,
@@ -22,7 +22,7 @@ impl <'a> StringReader<'a> {
     }
 }
 
-impl <'a> Reader<'a> for StringReader<'a> {
+impl <'a> Reader<'a> for BufferReader<'a> {
     fn peek(&self) -> Option<u8> {
         if self.position < self.data.len() {
             Some(self.data[self.position])

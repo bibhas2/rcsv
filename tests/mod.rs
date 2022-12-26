@@ -3,7 +3,7 @@ use rcsv::readers::*;
 
 #[test]
 fn test_string_reader() {
-    let mut reader = StringReader::from_str("aa,bb,cc\r\n");
+    let mut reader = BufferReader::from_str("aa,bb,cc\r\n");
 
     reader.mark_start();
 
@@ -41,7 +41,7 @@ fn test_mmap() {
         }
     };
 
-    let mut reader = StringReader::new(mapper.get_bytes());
+    let mut reader = BufferReader::new(mapper.get_bytes());
 
     reader.mark_start();
 
