@@ -8,12 +8,16 @@ pub struct StringReader<'a> {
 }
 
 impl <'a> StringReader<'a> {
-    pub fn new(data: &'a str) -> StringReader<'a> {
+    pub fn from_str(str: &'a str) -> StringReader<'a> {
+        StringReader::new(str.as_bytes())
+    }
+
+    pub fn new(data: &'a [u8]) -> StringReader<'a> {
         StringReader {
             start: 0,
             stop: 0,
             position: 0,
-            data: data.as_bytes(),
+            data: data,
         }
     }
 }

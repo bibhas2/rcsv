@@ -4,15 +4,14 @@ use crate::Reader;
 mod unix_map {
     use std::{fs::File, os::fd::AsRawFd};
 
-    pub struct FileMapper<'a> {
+    pub struct FileMapper {
         file_size: libc::size_t,
         ptr: *mut libc::c_void,
         file: File,
-        bytes: &'a [u8],
     }
 
-    impl <'a> FileMapper<'a> {
-        pub fn map(file_name: &str) -> Result<FileMapper<'a>, &str> {
+    impl FileMapper {
+        pub fn new(file_name: &str) -> Result<FileMapper, &str> {
 
             let file = match File::open(file_name) {
                 Ok(f) => f,
@@ -41,28 +40,26 @@ mod unix_map {
                     return Err("Failed to map file. mmap() failed.");
                 }
     
-                let bytes = std::slice::from_raw_parts(ptr as *const u8, file_size);
-
                 Ok(
                     FileMapper {
                         file_size,
                         ptr,
                         file, 
-                        bytes,
                     }
                 )
             }
         }
 
-        pub fn get_bytes(&'a self) -> &'a [u8] {
-            self.bytes
+        pub fn get_bytes(&self) -> &[u8] {
+            unsafe {std::slice::from_raw_parts(self.ptr as *const u8, self.file_size)}
         }
+
         pub fn size(&self) -> usize {
             self.file_size
         }
     }
 
-    impl <'a> Drop for FileMapper<'a> {
+    impl <'a> Drop for FileMapper {
         fn drop(&mut self) {
             unsafe {
                 libc::munmap(self.ptr, self.file_size);
@@ -72,59 +69,4 @@ mod unix_map {
 }
 
 #[cfg(unix)]
-use unix_map::FileMapper;
-
-pub struct MemoryMappedReader<'a> {
-    start: usize,
-    stop: usize,
-    position: usize,
-    mapper: FileMapper<'a>,
-}
-
-impl <'a> MemoryMappedReader<'a> {
-    pub fn new(file_name: &str) -> Result<MemoryMappedReader<'a>, &str> {
-        FileMapper::map(file_name).map(|mapper| MemoryMappedReader {
-            start: 0,
-            stop: 0,
-            position: 0,
-            mapper: mapper})
-    }
-}
-
-impl <'a> Reader<'a> for MemoryMappedReader<'a> {
-    fn peek(&self) -> Option<u8> {
-        if self.position < self.mapper.size() {
-            Some(self.mapper.get_bytes()[self.position])
-        } else {
-            None
-        }
-    }
-
-    fn pop(&mut self) -> Option<u8> {
-        if self.position < self.mapper.size() {
-            self.position += 1;
-
-            Some(self.mapper.get_bytes()[self.position - 1])
-        } else {
-            None
-        }
-    }
-
-    fn putback(&mut self) {
-        if self.position > 0 {
-            self.position -= 1;
-        }
-    }
-
-    fn mark_start(&mut self) {
-        self.start = self.position;
-    }
-
-    fn mark_stop(&mut self) {
-        self.stop = if self.position > 0  {self.position - 1} else {0};
-    }
-
-    fn segment(&'a self) -> &'a [u8] {
-        &self.mapper.get_bytes()[self.start..self.stop]
-    }
-}
+pub use unix_map::FileMapper;

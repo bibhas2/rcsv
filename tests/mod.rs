@@ -3,7 +3,7 @@ use rcsv::readers::*;
 
 #[test]
 fn test_string_reader() {
-    let mut reader = StringReader::new("aa,bb,cc\r\n");
+    let mut reader = StringReader::from_str("aa,bb,cc\r\n");
 
     reader.mark_start();
 
@@ -31,7 +31,7 @@ fn test_mmap() {
     let path = env!("CARGO_MANIFEST_DIR");
     let resource = format!("{path}/resources/test1.csv");
 
-    let mut reader = match MemoryMappedReader::new(&resource) {
+    let mapper = match FileMapper::new(&resource) {
         Ok(r) => r,
         Err(e) => {
             println!("{}", e);
@@ -40,6 +40,8 @@ fn test_mmap() {
             return;
         }
     };
+
+    let mut reader = StringReader::new(mapper.get_bytes());
 
     reader.mark_start();
 
