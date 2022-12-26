@@ -22,7 +22,7 @@ impl <'a> BufferReader<'a> {
     }
 }
 
-impl <'a> Reader<'a> for BufferReader<'a> {
+impl <'a> Reader for BufferReader<'a> {
     fn peek(&self) -> Option<u8> {
         if self.position < self.data.len() {
             Some(self.data[self.position])
@@ -55,7 +55,7 @@ impl <'a> Reader<'a> for BufferReader<'a> {
         self.stop = if self.position > 0  {self.position - 1} else {0};
     }
 
-    fn segment(&'a self) -> &'a [u8] {
+    fn segment(&self) -> &[u8] {
         &self.data[self.start..self.stop]
     }
 }

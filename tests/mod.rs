@@ -60,3 +60,15 @@ fn test_mmap() {
 
     assert_eq!(std::str::from_utf8(reader.segment()).unwrap(), "bb");
 }
+
+#[test]
+fn test_basic_parse() {
+    let mut reader = BufferReader::from_str("aa,bb,cc\r\n");
+    let f = |fields: &[&[u8]]| {
+        println!("Segment: {}", std::str::from_utf8(fields[0]).unwrap());
+    };
+
+    rcsv::parse::<10,_>(&mut reader, |fields| {
+        println!("Closure fields[0]: {}", std::str::from_utf8(fields[0]).unwrap());
+    });
+}
