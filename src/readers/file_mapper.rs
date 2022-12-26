@@ -1,5 +1,5 @@
 #[cfg(unix)]
-mod unix_map {
+pub mod unix_map {
     use std::{fs::File, os::fd::AsRawFd};
 
     pub struct FileMapper {
@@ -65,6 +65,3 @@ mod unix_map {
         }
     }
 }
-
-#[cfg(unix)]
-pub use unix_map::FileMapper;
