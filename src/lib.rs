@@ -1,12 +1,18 @@
 pub mod readers;
 
+#[derive(Copy, Clone)]
+pub struct FieldSegment {
+    pub start: usize,
+    pub stop: usize,
+}
+
 pub trait Reader {
     fn peek(&self) -> Option<u8>;
     fn pop(&mut self) -> Option<u8>;
     fn putback(&mut self);
     fn mark_start(&mut self);
     fn mark_stop(&mut self);
-    fn segment<'a>(&'a self) -> &'a [u8];
+    fn segment(&self) -> FieldSegment;
 }
 
 enum ParseStatus {
@@ -99,7 +105,7 @@ fn next_field(reader: &mut impl Reader) -> ParseStatus {
     }
 }
 
-fn parse_record<'a>(reader: &'a mut impl Reader, storage: &'a mut [&'a [u8]]) -> Option<&'a [&'a[u8]]> {
+fn parse_record<'a>(reader: &'a mut impl Reader, storage: &'a mut [FieldSegment]) -> Option<usize> {
     let mut field_index : usize  = 0;
 
     loop {
@@ -114,7 +120,13 @@ fn parse_record<'a>(reader: &'a mut impl Reader, storage: &'a mut [&'a [u8]]) ->
                 }
             },
             ParseStatus::EndRecord => {
-                return Some(&storage[0..field_index]);
+                if field_index < storage.len() {
+                    storage[field_index] = reader.segment();
+        
+                    field_index += 1;
+                }
+
+                return Some(field_index);
             },
             ParseStatus::EndDocument => {
                 return None;
@@ -126,12 +138,13 @@ fn parse_record<'a>(reader: &'a mut impl Reader, storage: &'a mut [&'a [u8]]) ->
 pub fn parse<const N: usize>(reader: &mut impl Reader, consumer: impl Fn(usize, &[&[u8]])) 
 {
     //Statically allocate memory for the fields of a record (line in CSV).
-    let mut storage: [&[u8]; N] = [&[]; N];
+    let mut storage: [FieldSegment; N] = [FieldSegment {start:0, stop: 0}; N];
+    let mut field_list: [&[u8]; N] = [&[]; N];
     let mut index: usize = 0;
     
-    while let Some(record) = parse_record(reader, &mut storage) {
-        consumer(index, record);
-
+    while let Some(field_count) = parse_record(reader, &mut storage) {
+        // consumer(index, record);
+        println!("Field count {}", field_count);
         index += 1;
     }
 }

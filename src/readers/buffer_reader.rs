@@ -1,4 +1,4 @@
-use crate::Reader;
+use crate::{Reader, FieldSegment};
 
 pub struct BufferReader<'a> {
     start: usize,
@@ -55,7 +55,10 @@ impl <'a> Reader for BufferReader<'a> {
         self.stop = if self.position > 0  {self.position - 1} else {0};
     }
 
-    fn segment(&self) -> &[u8] {
-        &self.data[self.start..self.stop]
+    fn segment(&self) -> FieldSegment {
+        FieldSegment {
+            start: self.start,
+            stop: self.stop
+        }
     }
 }
