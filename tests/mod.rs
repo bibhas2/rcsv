@@ -68,7 +68,7 @@ fn test_basic_parse() {
         println!("Segment: {}", std::str::from_utf8(fields[0]).unwrap());
     };
 
-    rcsv::parse::<10,_>(&mut reader, |fields| {
+    rcsv::parse::<10>(&mut reader, |index, fields| {
         println!("Closure fields[0]: {}", std::str::from_utf8(fields[0]).unwrap());
     });
 }
