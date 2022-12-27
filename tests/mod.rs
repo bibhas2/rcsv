@@ -54,9 +54,7 @@ fn test_basic_parse() {
         println!("Line {}", index);
 
         for field in fields {
-            let raw_field = &data[field.start..field.stop];
-            println!("\t{} {}", field.start, field.stop);
-            println!("{}", std::str::from_utf8(raw_field).unwrap());
+            println!("{}", std::str::from_utf8(field).unwrap());
         }
     });
 }
