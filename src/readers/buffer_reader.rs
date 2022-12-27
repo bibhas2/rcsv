@@ -1,41 +1,35 @@
 use crate::{Reader, FieldSegment};
 
-pub struct BufferReader<'a> {
+pub struct BufferReader {
     start: usize,
     stop: usize,
     position: usize,
-    data: &'a [u8],
 }
 
-impl <'a> BufferReader<'a> {
-    pub fn from_str(str: &'a str) -> BufferReader<'a> {
-        BufferReader::new(str.as_bytes())
-    }
-
-    pub fn new(data: &'a [u8]) -> BufferReader<'a> {
+impl BufferReader {
+    pub fn new() -> BufferReader {
         BufferReader {
             start: 0,
             stop: 0,
             position: 0,
-            data: data,
         }
     }
 }
 
-impl <'a> Reader for BufferReader<'a> {
-    fn peek(&self) -> Option<u8> {
-        if self.position < self.data.len() {
-            Some(self.data[self.position])
+impl Reader for BufferReader {
+    fn peek(&self, data: &[u8]) -> Option<u8> {
+        if self.position < data.len() {
+            Some(data[self.position])
         } else {
             None
         }
     }
 
-    fn pop(&mut self) -> Option<u8> {
-        if self.position < self.data.len() {
+    fn pop(&mut self, data: &[u8]) -> Option<u8> {
+        if self.position < data.len() {
             self.position += 1;
 
-            Some(self.data[self.position - 1])
+            Some(data[self.position - 1])
         } else {
             None
         }

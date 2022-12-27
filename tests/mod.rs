@@ -3,13 +3,14 @@ use rcsv::readers::*;
 
 #[test]
 fn test_string_reader() {
-    let mut reader = BufferReader::from_str("aa,bb,cc\r\n");
+    let data = "aa,bb,cc\r\n".as_bytes();
+    let mut reader = BufferReader::new();
 
     reader.mark_start();
 
-    assert_eq!(97, reader.pop().unwrap());
-    assert_eq!(97, reader.pop().unwrap());
-    assert_eq!(44, reader.pop().unwrap());
+    assert_eq!(97, reader.pop(data).unwrap());
+    assert_eq!(97, reader.pop(data).unwrap());
+    assert_eq!(44, reader.pop(data).unwrap());
 
     reader.mark_stop();
 
@@ -29,13 +30,14 @@ fn test_mmap() {
         }
     };
 
-    let mut reader = BufferReader::new(mapper.get_bytes());
+    let data = mapper.get_bytes();
+    let mut reader = BufferReader::new();
 
     reader.mark_start();
 
-    assert_eq!(97, reader.pop().unwrap());
-    assert_eq!(97, reader.pop().unwrap());
-    assert_eq!(44, reader.pop().unwrap());
+    assert_eq!(97, reader.pop(data).unwrap());
+    assert_eq!(97, reader.pop(data).unwrap());
+    assert_eq!(44, reader.pop(data).unwrap());
 
     reader.mark_stop();
 
@@ -45,13 +47,16 @@ fn test_mmap() {
 
 #[test]
 fn test_basic_parse() {
-    let mut reader = BufferReader::from_str("aa,bb,cc\r\ndd,ee,ff,gg\r\n");
+    let data = "aa,bb,cc\r\ndd,ee,ff,gg\r\n".as_bytes();
+    let mut reader = BufferReader::new();
 
-    parse::<3>(&mut reader, |index, fields| {
+    parse::<3>(data, &mut reader, |index, fields| {
         println!("Line {}", index);
 
         for field in fields {
+            let raw_field = &data[field.start..field.stop];
             println!("\t{} {}", field.start, field.stop);
+            println!("{}", std::str::from_utf8(raw_field).unwrap());
         }
     });
 }

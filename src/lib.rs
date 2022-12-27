@@ -7,8 +7,8 @@ pub struct FieldSegment {
 }
 
 pub trait Reader {
-    fn peek(&self) -> Option<u8>;
-    fn pop(&mut self) -> Option<u8>;
+    fn peek(&self, data: &[u8]) -> Option<u8>;
+    fn pop(&mut self, data: &[u8]) -> Option<u8>;
     fn putback(&mut self);
     fn mark_start(&mut self);
     fn mark_stop(&mut self);
@@ -21,7 +21,7 @@ enum ParseStatus {
     EndDocument
 }
 
-fn next_field(reader: &mut impl Reader) -> ParseStatus {
+fn next_field(data: &[u8], reader: &mut impl Reader) -> ParseStatus {
     let mut inside_dquote = false;
     let mut escaped_field = false;
     let dquote:u8 = 34;
@@ -32,7 +32,7 @@ fn next_field(reader: &mut impl Reader) -> ParseStatus {
     reader.mark_start();
     
     loop {
-        if let Some(ch) = reader.pop() {
+        if let Some(ch) = reader.pop(data) {
             if ch == dquote {
                 if !inside_dquote {
                     inside_dquote = true;
@@ -40,11 +40,11 @@ fn next_field(reader: &mut impl Reader) -> ParseStatus {
                     
                     reader.mark_start();
                 } else {
-                    match reader.peek() {
+                    match reader.peek(data) {
                         Some(ch2) => {
                             if ch2 == dquote {
                                 //Still inside dquote
-                                reader.pop();
+                                reader.pop(data);
                             } else {
                                 //We are out of dquote
                                 inside_dquote = false;
@@ -82,7 +82,7 @@ fn next_field(reader: &mut impl Reader) -> ParseStatus {
                 
                 // field = reader.segment();
                 
-                reader.pop(); //Read the LF \n
+                reader.pop(data); //Read the LF \n
                 
                 return ParseStatus::EndRecord;
             }
@@ -105,11 +105,11 @@ fn next_field(reader: &mut impl Reader) -> ParseStatus {
     }
 }
 
-fn parse_record<'a>(reader: &'a mut impl Reader, storage: &'a mut [FieldSegment]) -> Option<usize> {
+fn parse_record<'a>(data: &[u8], reader: &'a mut impl Reader, storage: &'a mut [FieldSegment]) -> Option<usize> {
     let mut field_index : usize  = 0;
 
     loop {
-        let status = next_field(reader);
+        let status = next_field(data, reader);
 
         match status {
             ParseStatus::HasMoreFields => {
@@ -135,14 +135,14 @@ fn parse_record<'a>(reader: &'a mut impl Reader, storage: &'a mut [FieldSegment]
     }
 }
 
-pub fn parse<const N: usize>(reader: &mut impl Reader, consumer: impl Fn(usize, &[FieldSegment])) 
+pub fn parse<const N: usize>(data: &[u8], reader: &mut impl Reader, consumer: impl Fn(usize, &[FieldSegment])) 
 {
     //Statically allocate memory for the fields of a record (line in CSV).
     let mut storage: [FieldSegment; N] = [FieldSegment {start:0, stop: 0}; N];
     let mut field_list: [&[u8]; N] = [&[]; N];
     let mut index: usize = 0;
     
-    while let Some(field_count) = parse_record(reader, &mut storage) {
+    while let Some(field_count) = parse_record(data, reader, &mut storage) {
         consumer(index, &storage[0..field_count]);
 
         index += 1;
