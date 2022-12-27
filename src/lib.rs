@@ -135,7 +135,7 @@ fn parse_record<'a>(reader: &'a mut impl Reader, storage: &'a mut [FieldSegment]
     }
 }
 
-pub fn parse<const N: usize>(reader: &mut impl Reader, consumer: impl Fn(usize, &[&[u8]])) 
+pub fn parse<const N: usize>(reader: &mut impl Reader, consumer: impl Fn(usize, &[FieldSegment])) 
 {
     //Statically allocate memory for the fields of a record (line in CSV).
     let mut storage: [FieldSegment; N] = [FieldSegment {start:0, stop: 0}; N];
@@ -143,8 +143,8 @@ pub fn parse<const N: usize>(reader: &mut impl Reader, consumer: impl Fn(usize, 
     let mut index: usize = 0;
     
     while let Some(field_count) = parse_record(reader, &mut storage) {
-        // consumer(index, record);
-        println!("Field count {}", field_count);
+        consumer(index, &storage[0..field_count]);
+
         index += 1;
     }
 }

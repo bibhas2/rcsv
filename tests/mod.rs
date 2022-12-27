@@ -48,6 +48,10 @@ fn test_basic_parse() {
     let mut reader = BufferReader::from_str("aa,bb,cc\r\ndd,ee,ff,gg\r\n");
 
     parse::<3>(&mut reader, |index, fields| {
-        println!("Closure fields[0]: {}", std::str::from_utf8(fields[0]).unwrap());
+        println!("Line {}", index);
+
+        for field in fields {
+            println!("\t{} {}", field.start, field.stop);
+        }
     });
 }
