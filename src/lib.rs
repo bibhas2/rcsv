@@ -13,6 +13,7 @@ pub trait Reader {
     fn mark_start(&mut self);
     fn mark_stop(&mut self);
     fn segment(&self) -> FieldSegment;
+    fn field<'a>(&self, data: &'a [u8]) -> &'a [u8];
 }
 
 enum ParseStatus {
@@ -105,7 +106,7 @@ fn next_field(data: &[u8], reader: &mut impl Reader) -> ParseStatus {
     }
 }
 
-fn parse_record<'a>(data: &[u8], reader: &'a mut impl Reader, storage: &'a mut [FieldSegment]) -> Option<usize> {
+fn parse_record<'a>(data: &'a [u8], reader: &mut impl Reader, storage: &mut [FieldSegment], fields: &mut [&'a [u8]]) -> Option<usize> {
     let mut field_index : usize  = 0;
 
     loop {
@@ -115,13 +116,15 @@ fn parse_record<'a>(data: &[u8], reader: &'a mut impl Reader, storage: &'a mut [
             ParseStatus::HasMoreFields => {
                 if field_index < storage.len() {
                     storage[field_index] = reader.segment();
-        
+                    fields[field_index] = reader.field(data);
+
                     field_index += 1;
                 }
             },
             ParseStatus::EndRecord => {
                 if field_index < storage.len() {
                     storage[field_index] = reader.segment();
+                    fields[field_index] = reader.field(data);
         
                     field_index += 1;
                 }
@@ -139,15 +142,11 @@ pub fn parse<const N: usize>(data: &[u8], reader: &mut impl Reader, consumer: im
 {
     //Statically allocate memory for the fields of a record (line in CSV).
     let mut storage: [FieldSegment; N] = [FieldSegment {start:0, stop: 0}; N];
-    let mut field_list: [&[u8]; N] = [&[]; N];
+    let mut fields: [&[u8]; N] = [&[]; N];
     let mut index: usize = 0;
     
-    while let Some(field_count) = parse_record(data, reader, &mut storage) {
-        for (f_idx, segment) in storage[0..field_count].iter().enumerate() {
-            field_list[f_idx] = &data[segment.start..segment.stop];
-        }
-
-        consumer(index, &field_list[0..field_count]);
+    while let Some(field_count) = parse_record(data, reader, &mut storage, &mut fields) {
+        consumer(index, &fields[0..field_count]);
 
         index += 1;
     }

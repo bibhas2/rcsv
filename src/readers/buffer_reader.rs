@@ -55,4 +55,9 @@ impl Reader for BufferReader {
             stop: self.stop
         }
     }
+    fn field<'a>(&self, data: &'a [u8]) -> &'a [u8] {
+        let s = self.segment();
+
+        &data[s.start..s.stop]
+    }
 }
