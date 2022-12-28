@@ -1,18 +1,11 @@
 pub mod readers;
 
-#[derive(Copy, Clone)]
-pub struct FieldSegment {
-    pub start: usize,
-    pub stop: usize,
-}
-
 pub trait Reader {
     fn peek(&self, data: &[u8]) -> Option<u8>;
     fn pop(&mut self, data: &[u8]) -> Option<u8>;
     fn putback(&mut self);
     fn mark_start(&mut self);
     fn mark_stop(&mut self);
-    fn segment(&self) -> FieldSegment;
     fn field<'a>(&self, data: &'a [u8]) -> &'a [u8];
 }
 
@@ -70,8 +63,6 @@ fn next_field(data: &[u8], reader: &mut impl Reader) -> ParseStatus {
                 if !escaped_field {
                     reader.mark_stop();
                 }
-                
-                //field = reader.segment();
 
                 return ParseStatus::HasMoreFields;
             }
@@ -80,8 +71,6 @@ fn next_field(data: &[u8], reader: &mut impl Reader) -> ParseStatus {
                 if !escaped_field {
                     reader.mark_stop();
                 }
-                
-                // field = reader.segment();
                 
                 reader.pop(data); //Read the LF \n
                 
@@ -95,9 +84,7 @@ fn next_field(data: &[u8], reader: &mut impl Reader) -> ParseStatus {
                 if !escaped_field {
                     reader.mark_stop();
                 }
-    
-                // field = reader.segment();
-                
+ 
                 return ParseStatus::EndRecord;
             }
         } else {
@@ -106,7 +93,7 @@ fn next_field(data: &[u8], reader: &mut impl Reader) -> ParseStatus {
     }
 }
 
-fn parse_record<'a>(data: &'a [u8], reader: &mut impl Reader, storage: &mut [FieldSegment], fields: &mut [&'a [u8]]) -> Option<usize> {
+fn parse_record<'a>(data: &'a [u8], reader: &mut impl Reader, fields: &mut [&'a [u8]]) -> Option<usize> {
     let mut field_index : usize  = 0;
 
     loop {
@@ -114,16 +101,14 @@ fn parse_record<'a>(data: &'a [u8], reader: &mut impl Reader, storage: &mut [Fie
 
         match status {
             ParseStatus::HasMoreFields => {
-                if field_index < storage.len() {
-                    storage[field_index] = reader.segment();
+                if field_index < fields.len() {
                     fields[field_index] = reader.field(data);
 
                     field_index += 1;
                 }
             },
             ParseStatus::EndRecord => {
-                if field_index < storage.len() {
-                    storage[field_index] = reader.segment();
+                if field_index < fields.len() {
                     fields[field_index] = reader.field(data);
         
                     field_index += 1;
@@ -141,11 +126,10 @@ fn parse_record<'a>(data: &'a [u8], reader: &mut impl Reader, storage: &mut [Fie
 pub fn parse<const N: usize>(data: &[u8], reader: &mut impl Reader, consumer: impl Fn(usize, &[&[u8]])) 
 {
     //Statically allocate memory for the fields of a record (line in CSV).
-    let mut storage: [FieldSegment; N] = [FieldSegment {start:0, stop: 0}; N];
     let mut fields: [&[u8]; N] = [&[]; N];
     let mut index: usize = 0;
     
-    while let Some(field_count) = parse_record(data, reader, &mut storage, &mut fields) {
+    while let Some(field_count) = parse_record(data, reader, &mut fields) {
         consumer(index, &fields[0..field_count]);
 
         index += 1;

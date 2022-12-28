@@ -1,6 +1,5 @@
 use rcsv::*;
 use rcsv::readers::*;
-
 #[test]
 fn test_string_reader() {
     let data = "aa,bb,cc\r\n".as_bytes();
@@ -14,8 +13,7 @@ fn test_string_reader() {
 
     reader.mark_stop();
 
-    assert_eq!(reader.segment().start, 0);
-    assert_eq!(reader.segment().stop, 2);
+    assert_eq!(reader.field(data), "aa".as_bytes());
 }
 
 #[test]
@@ -41,8 +39,7 @@ fn test_mmap() {
 
     reader.mark_stop();
 
-    assert_eq!(reader.segment().start, 0);
-    assert_eq!(reader.segment().stop, 2);
+    assert_eq!(reader.field(data), "aa".as_bytes());
 }
 
 #[test]
