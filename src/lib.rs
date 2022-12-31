@@ -1,137 +1,182 @@
-pub mod readers;
-
-pub trait Reader {
-    fn peek(&self, data: &[u8]) -> Option<u8>;
-    fn pop(&mut self, data: &[u8]) -> Option<u8>;
-    fn putback(&mut self);
-    fn mark_start(&mut self);
-    fn mark_stop(&mut self);
-    fn field<'a>(&self, data: &'a [u8]) -> &'a [u8];
-}
-
+pub mod mmap;
 enum ParseStatus {
     HasMoreFields,
     EndRecord,
-    EndDocument
+    EndDocument,
 }
 
-fn next_field(data: &[u8], reader: &mut impl Reader) -> ParseStatus {
-    let mut inside_dquote = false;
-    let mut escaped_field = false;
-    let dquote:u8 = 34;
-    let comma:u8 = 44;
-    let cr:u8 = 13;
-    let lf:u8 = 10;
+pub struct Parser {
+    start: usize,
+    stop: usize,
+    position: usize,
+}
 
-    reader.mark_start();
-    
-    loop {
-        if let Some(ch) = reader.pop(data) {
-            if ch == dquote {
-                if !inside_dquote {
-                    inside_dquote = true;
-                    escaped_field = true;
-                    
-                    reader.mark_start();
-                } else {
-                    match reader.peek(data) {
-                        Some(ch2) => {
-                            if ch2 == dquote {
-                                //Still inside dquote
-                                reader.pop(data);
-                            } else {
-                                //We are out of dquote
-                                inside_dquote = false;
-                                
-                                reader.mark_stop();
+impl Parser {
+    pub fn new() -> Parser {
+        Parser {
+            start: 0,
+            stop: 0,
+            position: 0,
+        }
+    }
+
+    fn peek(&self, data: &[u8]) -> Option<u8> {
+        if self.position < data.len() {
+            Some(data[self.position])
+        } else {
+            None
+        }
+    }
+
+    fn pop(&mut self, data: &[u8]) -> Option<u8> {
+        if self.position < data.len() {
+            self.position += 1;
+
+            Some(data[self.position - 1])
+        } else {
+            None
+        }
+    }
+
+    fn putback(&mut self) {
+        if self.position > 0 {
+            self.position -= 1;
+        }
+    }
+
+    fn mark_start(&mut self) {
+        self.start = self.position;
+    }
+
+    fn mark_stop(&mut self) {
+        self.stop = if self.position > 0 {
+            self.position - 1
+        } else {
+            0
+        };
+    }
+
+    fn field<'a>(&self, data: &'a [u8]) -> &'a [u8] {
+        &data[self.start..self.stop]
+    }
+
+    fn next_field(&mut self, data: &[u8]) -> ParseStatus {
+        let mut inside_dquote = false;
+        let mut escaped_field = false;
+        let dquote: u8 = 34;
+        let comma: u8 = 44;
+        let cr: u8 = 13;
+        let lf: u8 = 10;
+
+        self.mark_start();
+
+        loop {
+            if let Some(ch) = self.pop(data) {
+                if ch == dquote {
+                    if !inside_dquote {
+                        inside_dquote = true;
+                        escaped_field = true;
+
+                        self.mark_start();
+                    } else {
+                        match self.peek(data) {
+                            Some(ch2) => {
+                                if ch2 == dquote {
+                                    //Still inside dquote
+                                    self.pop(data);
+                                } else {
+                                    //We are out of dquote
+                                    inside_dquote = false;
+
+                                    self.mark_stop();
+                                }
+                            }
+                            None => {
+                                return ParseStatus::EndDocument;
                             }
                         }
-                        None => {
-                            return ParseStatus::EndDocument;
-                        }
+                    }
+
+                    continue;
+                }
+
+                if inside_dquote {
+                    continue;
+                }
+
+                if ch == comma {
+                    if !escaped_field {
+                        self.mark_stop();
+                    }
+
+                    return ParseStatus::HasMoreFields;
+                }
+
+                if ch == cr {
+                    if !escaped_field {
+                        self.mark_stop();
+                    }
+
+                    self.pop(data); //Read the LF \n
+
+                    return ParseStatus::EndRecord;
+                }
+
+                /*
+                 * Non-standard end of line with just a LF \n
+                 */
+                if ch == lf {
+                    if !escaped_field {
+                        self.mark_stop();
+                    }
+
+                    return ParseStatus::EndRecord;
+                }
+            } else {
+                return ParseStatus::EndDocument;
+            }
+        }
+    }
+
+    fn parse_record<'a>(&mut self, data: &'a [u8], fields: &mut [&'a [u8]]) -> Option<usize> {
+        let mut field_index: usize = 0;
+
+        loop {
+            let status = self.next_field(data);
+
+            match status {
+                ParseStatus::HasMoreFields => {
+                    if field_index < fields.len() {
+                        fields[field_index] = self.field(data);
+
+                        field_index += 1;
                     }
                 }
-                
-                continue;
-            }
-            
-            if inside_dquote {
-                continue;
-            }
-            
-            if ch == comma {
-                if !escaped_field {
-                    reader.mark_stop();
+                ParseStatus::EndRecord => {
+                    if field_index < fields.len() {
+                        fields[field_index] = self.field(data);
+
+                        field_index += 1;
+                    }
+
+                    return Some(field_index);
                 }
-
-                return ParseStatus::HasMoreFields;
-            }
-            
-            if ch == cr {
-                if !escaped_field {
-                    reader.mark_stop();
+                ParseStatus::EndDocument => {
+                    return None;
                 }
-                
-                reader.pop(data); //Read the LF \n
-                
-                return ParseStatus::EndRecord;
-            }
-            
-            /*
-             * Non-standard end of line with just a LF \n
-             */
-            if ch == lf {
-                if !escaped_field {
-                    reader.mark_stop();
-                }
- 
-                return ParseStatus::EndRecord;
-            }
-        } else {
-            return ParseStatus::EndDocument;
-        }
-    }
-}
-
-fn parse_record<'a>(data: &'a [u8], reader: &mut impl Reader, fields: &mut [&'a [u8]]) -> Option<usize> {
-    let mut field_index : usize  = 0;
-
-    loop {
-        let status = next_field(data, reader);
-
-        match status {
-            ParseStatus::HasMoreFields => {
-                if field_index < fields.len() {
-                    fields[field_index] = reader.field(data);
-
-                    field_index += 1;
-                }
-            },
-            ParseStatus::EndRecord => {
-                if field_index < fields.len() {
-                    fields[field_index] = reader.field(data);
-        
-                    field_index += 1;
-                }
-
-                return Some(field_index);
-            },
-            ParseStatus::EndDocument => {
-                return None;
             }
         }
     }
-}
 
-pub fn parse<const N: usize>(data: &[u8], reader: &mut impl Reader, consumer: impl Fn(usize, &[&[u8]])) 
-{
-    //Statically allocate memory for the fields of a record (line in CSV).
-    let mut fields: [&[u8]; N] = [&[]; N];
-    let mut index: usize = 0;
-    
-    while let Some(field_count) = parse_record(data, reader, &mut fields) {
-        consumer(index, &fields[0..field_count]);
+    pub fn parse<const N: usize>(&mut self, data: &[u8], consumer: impl Fn(usize, &[&[u8]])) {
+        //Statically allocate memory for the fields of a record (line in CSV).
+        let mut fields: [&[u8]; N] = [&[]; N];
+        let mut index: usize = 0;
 
-        index += 1;
+        while let Some(field_count) = self.parse_record(data, &mut fields) {
+            consumer(index, &fields[0..field_count]);
+
+            index += 1;
+        }
     }
 }
