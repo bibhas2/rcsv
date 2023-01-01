@@ -168,7 +168,7 @@ impl Parser {
         }
     }
 
-    pub fn parse<const N: usize>(&mut self, data: &[u8], consumer: impl Fn(usize, &[&[u8]])) {
+    pub fn parse<const N: usize>(&mut self, data: &[u8], mut consumer: impl FnMut(usize, &[&[u8]])) {
         //Statically allocate memory for the fields of a record (line in CSV).
         let mut fields: [&[u8]; N] = [&[]; N];
         let mut index: usize = 0;
@@ -177,6 +177,20 @@ impl Parser {
             consumer(index, &fields[0..field_count]);
 
             index += 1;
+        }
+    }
+}
+
+pub fn parse_number<T: std::str::FromStr>(bytes:&[u8], n: &mut T) -> bool {
+    unsafe {
+        match std::str::from_utf8_unchecked(bytes)
+            .parse::<T>() {
+            Ok(v) => {
+                *n = v;
+
+                true
+            },
+            Err(_) => false
         }
     }
 }
