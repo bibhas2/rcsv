@@ -183,3 +183,29 @@ hh,ii\r\n";
             }
         });
 }
+
+#[test]
+fn test_parse_number() {
+    let str =
+"0.025717778,-2.3285230e-002,-1.4653762e-002\r\n\
+0.036717778,-3.4285230e-002,-10.4653762e-002\r\n";
+    
+    let mut parser = rcsv::Parser::new();
+    let mut total = 0.0f64;
+
+    parser.parse::<3>(str.as_bytes(), |index, fields| {
+            assert!(index < 3);
+
+            let mut n1:f64 = 0.0;
+            let mut n2:f64 = 0.0;
+            let mut n3:f64 = 0.0;
+
+            assert!(rcsv::parse_number(fields[0], &mut n1));
+            assert!(rcsv::parse_number(fields[1], &mut n2));
+            assert!(rcsv::parse_number(fields[2], &mut n3));
+
+            total += n1 + n2 + n3;
+    });
+
+    assert!(f64::abs(total - (-0.114442428)) < 0.0001);
+}
