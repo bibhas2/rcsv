@@ -1,27 +1,9 @@
-use rcsv::*;
-use rcsv::readers::*;
 #[test]
-fn test_string_reader() {
-    let data = "aa,bb,cc\r\n".as_bytes();
-    let mut reader = BufferReader::new();
-
-    reader.mark_start();
-
-    assert_eq!(97, reader.pop(data).unwrap());
-    assert_eq!(97, reader.pop(data).unwrap());
-    assert_eq!(44, reader.pop(data).unwrap());
-
-    reader.mark_stop();
-
-    assert_eq!(reader.field(data), "aa".as_bytes());
-}
-
-#[test]
-fn test_mmap() {
+fn test_memory_map_reader() {
     let path = env!("CARGO_MANIFEST_DIR");
     let resource = format!("{path}/resources/test1.csv");
 
-    let mapper = match FileMapper::new(&resource) {
+    let mapper = match rcsv::mmap::FileMapper::new(&resource) {
         Ok(r) => r,
         Err(e) => {
             panic!("{}", e);
@@ -29,17 +11,28 @@ fn test_mmap() {
     };
 
     let data = mapper.get_bytes();
-    let mut reader = BufferReader::new();
+    let mut parser = rcsv::Parser::new();
 
-    reader.mark_start();
-
-    assert_eq!(97, reader.pop(data).unwrap());
-    assert_eq!(97, reader.pop(data).unwrap());
-    assert_eq!(44, reader.pop(data).unwrap());
-
-    reader.mark_stop();
-
-    assert_eq!(reader.field(data), "aa".as_bytes());
+    parser.parse::<3>(data, |index, fields| {
+        assert!(index < 3);
+            
+        if index == 0 {
+            assert!(fields.len() == 3);
+            
+            assert!(fields[0] == "aa".as_bytes());
+            assert!(fields[2] == "cc".as_bytes());
+        } else if index == 1 {
+            assert!(fields.len() == 3);
+            
+            assert!(fields[0] == "dd".as_bytes());
+            assert!(fields[1] == "ee".as_bytes());
+        } else {
+            assert!(fields.len() == 3);
+            
+            assert!(fields[0] == "gg".as_bytes());
+            assert!(fields[1] == "hh".as_bytes());
+        }
+    });
 }
 
 #[test]
@@ -48,9 +41,9 @@ fn test_record() {
 "aa,bb,cc,dd\r\n\
 ee,ff,gg,hh\r\n";
     
-    let mut reader = rcsv::readers::BufferReader::new();
+    let mut parser = rcsv::Parser::new();
 
-    rcsv::parse::<10>(str.as_bytes(), &mut reader, |index, fields| {
+    parser.parse::<10>(str.as_bytes(), |index, fields| {
         assert!(index < 2);
         
         if index == 0 {
@@ -63,6 +56,7 @@ ee,ff,gg,hh\r\n";
     });
 }
 
+
 #[test]
 fn test_empty_line() {
     let str =
@@ -70,9 +64,9 @@ fn test_empty_line() {
 \r\n\
 ee,ff,gg,hh\r\n";
     
-    let mut reader = rcsv::readers::BufferReader::new();
+    let mut parser = rcsv::Parser::new();
 
-    rcsv::parse::<10>(str.as_bytes(), &mut reader, |index, fields| {
+    parser.parse::<10>(str.as_bytes(), |index, fields| {
         assert!(index < 3);
         
         if index == 0 {
@@ -95,9 +89,9 @@ fn test_basic_escape() {
 "ee",ff,"g
 g",hh
 "#;
-    let mut reader = rcsv::readers::BufferReader::new();
+    let mut parser = rcsv::Parser::new();
 
-    rcsv::parse::<10>(str.as_bytes(), &mut reader, |index, fields| {
+    parser.parse::<10>(str.as_bytes(), |index, fields| {
         assert!(index < 2);
         
         if index == 0 {
@@ -121,9 +115,9 @@ fn test_space() {
     let str = r#" aa, "bb",  cc ,
   " cc ", " dd "
 "#;
-    let mut reader = rcsv::readers::BufferReader::new();
+    let mut parser = rcsv::Parser::new();
 
-    rcsv::parse::<10>(str.as_bytes(), &mut reader, |index, fields| {
+    parser.parse::<10>(str.as_bytes(), |index, fields| {
         assert!(index < 2);
         
         if index == 0 {
@@ -144,9 +138,9 @@ fn test_line_feed() {
 "aa,bb,cc,dd
 ee,ff,gg,hh
 ";
-    let mut reader = rcsv::readers::BufferReader::new();
+    let mut parser = rcsv::Parser::new();
 
-    rcsv::parse::<10>(str.as_bytes(), &mut reader, |index, fields| {
+    parser.parse::<10>(str.as_bytes(), |index, fields| {
         assert!(index < 2);
         
         if index == 0 {
@@ -166,9 +160,9 @@ fn test_uneven() {
 ee,ff,gg\r\n\
 hh,ii\r\n";
     
-        let mut reader = rcsv::readers::BufferReader::new();
+    let mut parser = rcsv::Parser::new();
 
-        rcsv::parse::<3>(str.as_bytes(), &mut reader, |index, fields| {
+    parser.parse::<3>(str.as_bytes(), |index, fields| {
             assert!(index < 3);
         
             if index == 0 {
