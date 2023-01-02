@@ -70,12 +70,11 @@ pub mod unix_map {
 #[cfg(windows)]
 pub mod windows_map {
     use std::{fs::File};
-    use std::os::windows::io::{AsRawHandle, RawHandle};
+    use std::os::windows::io::{AsRawHandle};
     use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
     use winapi::um::fileapi::{GetFileSize};
     use winapi::um::memoryapi::{
-        CreateFileMappingW, FlushViewOfFile, MapViewOfFile, UnmapViewOfFile, VirtualProtect,
-        FILE_MAP_ALL_ACCESS, FILE_MAP_COPY, FILE_MAP_EXECUTE, FILE_MAP_READ, FILE_MAP_WRITE,
+        CreateFileMappingW, MapViewOfFile, UnmapViewOfFile, FILE_MAP_READ,
     };
     use winapi::um::winnt::PAGE_READONLY;
 
