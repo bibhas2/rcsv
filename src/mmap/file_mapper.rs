@@ -72,6 +72,7 @@ pub mod windows_map {
     use std::{fs::File};
     use std::os::windows::io::{AsRawHandle};
     use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
+    use winapi::um::winnt::HANDLE;
     use winapi::um::fileapi::{GetFileSize};
     use winapi::um::memoryapi::{
         CreateFileMappingW, MapViewOfFile, UnmapViewOfFile, FILE_MAP_READ,
@@ -80,7 +81,7 @@ pub mod windows_map {
 
     pub struct FileMapper {
         file_size: usize,
-        map_handle: *mut winapi::ctypes::c_void,
+        map_handle: HANDLE,
         ptr: *mut winapi::ctypes::c_void,
         file: File,
     }
