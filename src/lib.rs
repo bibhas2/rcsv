@@ -5,6 +5,9 @@ enum ParseStatus {
     EndDocument,
 }
 
+///A non-allocating parser of CSV data. 
+///It is compliant with RFC 4180. Due to its non-allocating nature, it can
+/// parse very large CSV files with a constant memory cost.
 pub struct Parser {
     start: usize,
     stop: usize,
@@ -12,6 +15,7 @@ pub struct Parser {
 }
 
 impl Parser {
+    /// Creates a new parser.
     pub fn new() -> Parser {
         Parser {
             start: 0,
@@ -168,6 +172,47 @@ impl Parser {
         }
     }
 
+    /// Begins parsing CSV ``data``. For every record (line in CSV), the ``consumer`` closure is called.
+    /// The generic parameter ``N`` determines the maximum number of fields (columns) that will be passed
+    /// to the closure. If the record has more fields then the excess fields are silently ignored.
+    /// It is always safer to err on the side of caution and set N larger than you think you need.
+    /// 
+    /// The closure receives two paremeters:
+    /// - The index of the record. The first line has an index of 0.
+    /// - An array of fields. Each field is an array of unsigned bytes ``&[u8]``.
+    /// 
+    /// # Example
+    ///  ```
+    /// fn test_uneven() {
+    ///     let str =
+    /// "aa,bb,cc,dd\r\n\
+    /// ee,ff,gg\r\n\
+    /// hh,ii\r\n";
+    /// 
+    ///     let mut parser = rcsv::Parser::new();
+    ///
+    ///     parser.parse::<3>(str.as_bytes(), |index, fields| {
+    ///             assert!(index < 3);
+    ///     
+    ///             if index == 0 {
+    ///                 assert!(fields.len() == 3);
+    ///               
+    ///                 assert!(fields[0] == "aa".as_bytes());
+    ///                 assert!(fields[2] == "cc".as_bytes());
+    ///             } else if index == 1 {
+    ///                 assert!(fields.len() == 3);
+    ///             
+    ///                 assert!(fields[0] == "ee".as_bytes());
+    ///                 assert!(fields[1] == "ff".as_bytes());
+    ///             } else {
+    ///                 assert!(fields.len() == 2);
+    ///                
+    ///                 assert!(fields[0] == "hh".as_bytes());
+    ///                 assert!(fields[1] == "ii".as_bytes());
+    ///             }
+    ///         });
+    /// }
+    /// ```
     pub fn parse<const N: usize>(&mut self, data: &[u8], mut consumer: impl FnMut(usize, &[&[u8]])) {
         //Statically allocate memory for the fields of a record (line in CSV).
         let mut fields: [&[u8]; N] = [&[]; N];
@@ -181,6 +226,36 @@ impl Parser {
     }
 }
 
+///Utility function that parses the ``bytes`` array to a number ``n``.
+/// It returns true if the conversion is successful.
+/// 
+/// # Example
+/// ```
+/// fn test_parse_number() {
+/// let str =
+/// "0.025717778,-2.3285230e-002,-1.4653762e-002\r\n\
+/// 0.036717778,-3.4285230e-002,-10.4653762e-002\r\n";
+///     
+///     let mut parser = rcsv::Parser::new();
+///     let mut total = 0.0f64;
+/// 
+///     parser.parse::<3>(str.as_bytes(), |index, fields| {
+///             assert!(index < 2);
+/// 
+///             let mut n1:f64 = 0.0;
+///             let mut n2:f64 = 0.0;
+///             let mut n3:f64 = 0.0;
+/// 
+///             assert!(rcsv::parse_number(fields[0], &mut n1));
+///             assert!(rcsv::parse_number(fields[1], &mut n2));
+///             assert!(rcsv::parse_number(fields[2], &mut n3));
+/// 
+///             total += n1 + n2 + n3;
+///     });
+/// 
+///     assert!(f64::abs(total - (-0.114442428)) < 0.0001);
+/// }
+/// ```
 pub fn parse_number<T: std::str::FromStr>(bytes:&[u8], n: &mut T) -> bool {
     unsafe {
         match std::str::from_utf8_unchecked(bytes)
