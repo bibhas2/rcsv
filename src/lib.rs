@@ -175,11 +175,11 @@ impl Parser {
     /// Begins parsing CSV ``data``. For every record (line in CSV), the ``consumer`` closure is called.
     /// The generic parameter ``N`` determines the maximum number of fields (columns) that will be passed
     /// to the closure. If the record has more fields then the excess fields are silently ignored.
-    /// It is always safer to err on the side of caution and set N larger than you think you need.
+    /// It is always safer to err on the side of caution and set ``N`` larger than you think you need.
     /// 
     /// The closure receives two paremeters:
     /// - The index of the record. The first line has an index of 0.
-    /// - An array of fields. Each field is an array of unsigned bytes ``&[u8]``.
+    /// - An array slice of fields ``&[ &[u8] ]``. Each field is an array of unsigned bytes ``&[u8]``.
     /// 
     /// # Example
     ///  ```
@@ -195,6 +195,7 @@ impl Parser {
     ///             assert!(index < 3);
     ///     
     ///             if index == 0 {
+    ///                 //We have more fields (4) than the maximum set (3).
     ///                 assert!(fields.len() == 3);
     ///               
     ///                 assert!(fields[0] == "aa".as_bytes());
@@ -205,6 +206,7 @@ impl Parser {
     ///                 assert!(fields[0] == "ee".as_bytes());
     ///                 assert!(fields[1] == "ff".as_bytes());
     ///             } else {
+    ///                 //We have fewer fields (2) than the maximum set (3).
     ///                 assert!(fields.len() == 2);
     ///                
     ///                 assert!(fields[0] == "hh".as_bytes());
@@ -258,7 +260,7 @@ impl Parser {
 /// ```
 pub fn parse_number<T: std::str::FromStr>(bytes:&[u8], n: &mut T) -> bool {
     unsafe {
-        match std::str::from_utf8_unchecked(bytes)
+        match std::str::from_utf8_unchecked(bytes).trim()
             .parse::<T>() {
             Ok(v) => {
                 *n = v;
