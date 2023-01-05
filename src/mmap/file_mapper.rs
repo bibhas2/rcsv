@@ -70,12 +70,12 @@ pub mod unix_map {
             }
         }
 
-        ///Returns all the data in the file as byte array ``&[u8]``.
+        ///Returns all the data in the file as byte array slice ``&[u8]``.
         pub fn get_bytes(&self) -> &[u8] {
             unsafe {std::slice::from_raw_parts(self.ptr as *const u8, self.file_size)}
         }
 
-        ///Returns the size of the file. This is also the length of the array returned by ``get_bytes()``.
+        ///Returns the size of the file. This is same as the length of the array slice returned by ``get_bytes()``.
         pub fn size(&self) -> usize {
             self.file_size
         }

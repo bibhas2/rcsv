@@ -228,14 +228,21 @@ impl Parser {
     }
 }
 
-///Utility function that parses the ``bytes`` array to a number ``n``.
-/// It returns true if the conversion is successful.
+///Utility function that parses the ``bytes`` array slice to a number ``n``.
+///It returns true if the conversion is successful.
 /// 
+/// Parsing is done by the ``std::str::parse()`` method.
+/// 
+/// As an optimization, the ``bytes`` array slice ``&[u8]`` is converted to ``&str`` without
+/// validating for UTF-8. This is OK to do since the number parser does its own validation.
+/// 
+/// Spaces around the string are trimmed to avoid errors from the number parser.
+///  
 /// # Example
 /// ```
 /// fn test_parse_number() {
 /// let str =
-/// "0.025717778,-2.3285230e-002,-1.4653762e-002\r\n\
+/// "0.025717778,  -2.3285230e-002  ,-1.4653762e-002\r\n\
 /// 0.036717778,-3.4285230e-002,-10.4653762e-002\r\n";
 ///     
 ///     let mut parser = rcsv::Parser::new();
