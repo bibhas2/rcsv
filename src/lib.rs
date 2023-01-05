@@ -1,3 +1,7 @@
+//!A non-allocating parser of CSV data. 
+//!It is compliant with RFC 4180. Due to its non-allocating nature, it can
+//!parse very large CSV files with a constant memory cost.
+
 pub mod mmap;
 enum ParseStatus {
     HasMoreFields,
@@ -5,9 +9,7 @@ enum ParseStatus {
     EndDocument,
 }
 
-///A non-allocating parser of CSV data. 
-///It is compliant with RFC 4180. Due to its non-allocating nature, it can
-/// parse very large CSV files with a constant memory cost.
+///The parser of CSV data.
 pub struct Parser {
     start: usize,
     stop: usize,
@@ -231,7 +233,7 @@ impl Parser {
 ///Utility function that parses the ``bytes`` array slice to a number ``n``.
 ///It returns true if the conversion is successful.
 /// 
-/// Parsing is done by the ``std::str::parse()`` method.
+/// Parsing is done internally by the ``std::str::parse()`` method.
 /// 
 /// As an optimization, the ``bytes`` array slice ``&[u8]`` is converted to ``&str`` without
 /// validating for UTF-8. This is OK to do since the number parser does its own validation.

@@ -2,7 +2,7 @@
 pub mod unix_map {
     use std::{fs::File, os::fd::AsRawFd};
 
-    ///Provides a cross platform way to get the bytes in a file using file mapping. Currently Linux, macOS and Windows are supported.
+    ///Performs memory mapping of a file.
     pub struct FileMapper {
         file_size: libc::size_t,
         ptr: *mut libc::c_void,
@@ -10,9 +10,11 @@ pub mod unix_map {
     }
 
     impl FileMapper {
-        ///Creates a new ``FileMapper`` that maps the file pointed to by ``file_name``. The file is mapped in read only mode.
+        ///Creates a new ``FileMapper`` that maps the file pointed to by ``file_name``. The file is mapped in read-only mode.
         /// 
         /// # Example
+        /// The example below memory maps a CSV file ``test.csv`` and parses the CSV.
+        /// 
         /// ```
         ///fn test_memory_map_reader() {
         ///    let mapper = match rcsv::mmap::FileMapper::new("test.csv") {

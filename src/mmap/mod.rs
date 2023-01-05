@@ -1,3 +1,5 @@
+//!Provides a cross platform way to get the bytes in a CSV file using memory mapping. Currently Linux, macOS and Windows are supported.
+
 mod file_mapper;
 
 #[cfg(unix)]
